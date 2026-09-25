@@ -1,0 +1,29 @@
+# docker compose up --build   ->   http://localhost:3000
+# Secrets come from backend/.env (never baked into the image).
+services:
+  api:
+    build: ./backend
+    env_file: ./backend/.env
+    environment:
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      CORS_ORIGINS: ${APP_URL:-http://localhost:3000}
+      TRUSTED_PROXY_HOPS: "1"        # the web container is the only proxy in front of the API
+      LOG_FORMAT: json
+    volumes:
+      - ledgerly-data:/app/data      # SQLite database + receipts
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        BACKEND_URL: http://api:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  ledgerly-data:
